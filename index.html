@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LES Encore Rotation Day</title>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+    body { display: flex; align-items: center; justify-content: center; font-family: Arial, Helvetica, sans-serif; color: #fff; }
+    #output { font-size: clamp(20px, 4vw, 64px); font-weight: 600; text-align: center; white-space: nowrap; line-height: 1.15; text-shadow: 0 2px 5px rgba(0,0,0,.55); }
+  </style>
+</head>
+<body>
+  <div id="output" aria-live="polite">Loading Encore day...</div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBcHWGBSNu9LJUHhbahQqKDpNZYSufza90",
+      authDomain: "les-live.firebaseapp.com",
+      databaseURL: "https://les-live-default-rtdb.firebaseio.com",
+      projectId: "les-live",
+      appId: "1:76711441074:web:7ab3de7e6e0b905ed94fab"
+    };
+
+    const firebaseApp = initializeApp(firebaseConfig);
+    const db = getDatabase(firebaseApp);
+    const output = document.getElementById("output");
+    let encoreData = null;
+
+    function todayKey() {
+      // Use the school's timezone even if the display's timezone differs.
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit"
+      }).formatToParts(new Date());
+      const part = type => parts.find(p => p.type === type).value;
+      return `${part("year")}-${part("month")}-${part("day")}`;
+    }
+
+    function updateDisplay() {
+      if (encoreData === null) return;
+      const entry = encoreData[todayKey()];
+      const value = String(entry?.day ?? "").trim();
+      const match = /^D?\s*(\d+)$/i.exec(value);
+      output.textContent = match ? `Today is a Day ${match[1]}` : "No Encore Day Scheduled";
+    }
+
+    onValue(ref(db, "sites/clock-site/encore"), snapshot => {
+      encoreData = snapshot.val() || {};
+      updateDisplay();
+    }, error => {
+      console.error("Encore data error:", error);
+      output.textContent = "Encore Day Unavailable";
+    });
+
+    // Check for date rollover while the signage remains open.
+    setInterval(updateDisplay, 60 * 1000);
+  </script>
+</body>
+</html>
